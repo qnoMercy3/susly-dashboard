@@ -4,12 +4,16 @@ import {
   AlertCircle,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Filter,
   Loader2,
   Lock,
   Plus,
   RefreshCw,
   Search,
-  Trash2,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -20,6 +24,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -37,6 +44,12 @@ type ApiState = {
   overview: OverviewData | null;
   users: AdminUser[];
   creators: CreatorToolAccess[];
+};
+
+type CreatorProvisionResult = {
+  title: string;
+  rows: Array<{ label: string; value: string }>;
+  copyText: string;
 };
 
 const emptyApiState: ApiState = {
@@ -237,7 +250,7 @@ function OverviewTab({ overview }: { overview: OverviewData }) {
 
   return (
     <div className="tab-panel">
-      <section className="stats-grid">
+      <section className="stats-grid downloads-stats">
         <StatTile label="Downloads" note="First opens already tracked" value={compactNumber(stats.downloads)} />
         <StatTile label="Users" note="Registered accounts" value={compactNumber(stats.users)} />
         <StatTile
@@ -262,11 +275,11 @@ function OverviewTab({ overview }: { overview: OverviewData }) {
         />
       </section>
 
-      <section className="workspace-grid">
-        <div className="panel span-2">
+      <section className="overview-grid">
+        <div className="panel">
           <SectionHeader eyebrow="Last 30 days" title="Growth trend" />
           <div className="chart">
-            <ResponsiveContainer height={320} width="100%">
+            <ResponsiveContainer height={360} width="100%">
               <AreaChart data={overview.trends}>
                 <defs>
                   <linearGradient id="downloads" x1="0" x2="0" y1="0" y2="1">
@@ -279,7 +292,13 @@ function OverviewTab({ overview }: { overview: OverviewData }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="rgba(231,108,174,0.12)" vertical={false} />
-                <XAxis dataKey="date" minTickGap={24} stroke="#7d6172" tickLine={false} />
+                <XAxis
+                  dataKey="date"
+                  minTickGap={24}
+                  stroke="#7d6172"
+                  tickFormatter={formatDate}
+                  tickLine={false}
+                />
                 <YAxis allowDecimals={false} stroke="#7d6172" tickLine={false} width={36} />
                 <Tooltip
                   contentStyle={{
@@ -296,28 +315,6 @@ function OverviewTab({ overview }: { overview: OverviewData }) {
             </ResponsiveContainer>
           </div>
         </div>
-
-        <div className="panel">
-          <SectionHeader eyebrow="Operations" title="Scrape status" />
-          <div className="status-stack">
-            <div>
-              <span>Pending / running</span>
-              <strong>{compactNumber(stats.pendingScrapes)}</strong>
-            </div>
-            <div>
-              <span>Failed</span>
-              <strong>{compactNumber(stats.failedScrapes)}</strong>
-            </div>
-            <div>
-              <span>Tracked profiles</span>
-              <strong>{compactNumber(stats.trackedProfiles)}</strong>
-            </div>
-            <div>
-              <span>Active relationships</span>
-              <strong>{compactNumber(stats.activeTrackingRelationships)}</strong>
-            </div>
-          </div>
-        </div>
       </section>
     </div>
   );
@@ -326,37 +323,101 @@ function OverviewTab({ overview }: { overview: OverviewData }) {
 function BreakdownChart({
   title,
   data,
+  mode,
 }: {
   title: string;
   data: Array<{ label: string; value: number }>;
+  mode: "bar" | "pie";
 }) {
+  const chartData = data.slice(0, 8);
+  const pieColors = ["#E76CAE", "#FB86C5", "#E773E6", "#F8A8D8", "#D95EA0", "#C955D8", "#F4B4D0", "#B84C87"];
+  const yAxisWidth = Math.min(
+    196,
+    Math.max(
+      112,
+      chartData.reduce((maxWidth, entry) => Math.max(maxWidth, cleanLabel(entry.label).length * 7), 0),
+    ),
+  );
+
   return (
     <div className="panel">
       <SectionHeader eyebrow="Breakdown" title={title} />
       {data.length > 0 ? (
-        <ResponsiveContainer height={250} width="100%">
-          <BarChart data={data.slice(0, 8)} layout="vertical" margin={{ left: 8, right: 8 }}>
-            <CartesianGrid stroke="rgba(231,108,174,0.12)" horizontal={false} />
-            <XAxis allowDecimals={false} stroke="#7d6172" type="number" />
-            <YAxis
-              dataKey="label"
-              stroke="#7d6172"
-              tickFormatter={cleanLabel}
-              tickLine={false}
-              type="category"
-              width={112}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "#FFFFFF",
-                border: "1px solid rgba(231,108,174,0.18)",
-                borderRadius: "16px",
-                color: "#210A16",
-              }}
-            />
-            <Bar dataKey="value" fill="#E76CAE" radius={[0, 8, 8, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        mode === "bar" ? (
+          <ResponsiveContainer height={250} width="100%">
+            <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+              <CartesianGrid stroke="rgba(231,108,174,0.12)" horizontal={false} />
+              <XAxis allowDecimals={false} stroke="#7d6172" type="number" />
+              <YAxis
+                dataKey="label"
+                interval={0}
+                stroke="#7d6172"
+                tickFormatter={cleanLabel}
+                tickLine={false}
+                type="category"
+                width={yAxisWidth}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(231,108,174,0.18)",
+                  borderRadius: "16px",
+                  color: "#210A16",
+                }}
+              />
+              <Bar dataKey="value" fill="#E76CAE" radius={[0, 8, 8, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="pie-breakdown">
+            <div className="pie-breakdown-chart">
+              <ResponsiveContainer height={250} width="100%">
+                <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <Tooltip
+                    contentStyle={{
+                      background: "#FFFFFF",
+                      border: "1px solid rgba(231,108,174,0.18)",
+                      borderRadius: "16px",
+                      color: "#210A16",
+                    }}
+                    formatter={(value) => [value, "Count"]}
+                    labelFormatter={(value) => cleanLabel(String(value))}
+                  />
+                  <Pie
+                    cx="50%"
+                    cy="50%"
+                    data={chartData}
+                    dataKey="value"
+                    nameKey="label"
+                    innerRadius={48}
+                    outerRadius={82}
+                    paddingAngle={3}
+                    stroke="rgba(255,255,255,0.88)"
+                    strokeWidth={2}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell fill={pieColors[index % pieColors.length]} key={entry.label} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="pie-breakdown-legend">
+              {chartData.map((entry, index) => (
+                <div className="pie-legend-item" key={entry.label}>
+                  <span
+                    className="pie-legend-swatch"
+                    style={{ backgroundColor: pieColors[index % pieColors.length] }}
+                  />
+                  <div className="pie-legend-copy">
+                    <strong>{cleanLabel(entry.label)}</strong>
+                    <small>{entry.value}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
       ) : (
         <p className="empty">No data yet.</p>
       )}
@@ -365,39 +426,235 @@ function BreakdownChart({
 }
 
 function OnboardingTab({ overview }: { overview: OverviewData }) {
+  const [chartMode, setChartMode] = useState<"bar" | "pie">("bar");
+
   return (
     <div className="tab-panel">
-      <div className="notice">
-        <CheckCircle2 size={18} />
-        V1 uses existing data only. Exact step-level drop-off is not available until the app records step events.
+      <div className="toolbar">
+        <div className="view-toggle">
+          <button
+            className={chartMode === "bar" ? "active" : ""}
+            onClick={() => setChartMode("bar")}
+            type="button"
+          >
+            Bar
+          </button>
+          <button
+            className={chartMode === "pie" ? "active" : ""}
+            onClick={() => setChartMode("pie")}
+            type="button"
+          >
+            Pie
+          </button>
+        </div>
       </div>
-      <section className="workspace-grid two">
-        <BreakdownChart data={overview.onboardingBreakdowns.identity} title="Identity" />
-        <BreakdownChart data={overview.onboardingBreakdowns.relationship} title="Watched relationship" />
-        <BreakdownChart data={overview.onboardingBreakdowns.reason} title="Reason" />
-        <BreakdownChart data={overview.onboardingBreakdowns.worry} title="Main worry" />
-        <BreakdownChart data={overview.onboardingBreakdowns.history} title="Betrayal history" />
-        <BreakdownChart data={overview.subscriptionBreakdown} title="Subscription status" />
+      <section className={`workspace-grid two${chartMode === "pie" ? " pie-mode" : ""}`}>
+        <BreakdownChart data={overview.onboardingBreakdowns.identity} mode={chartMode} title="Identity" />
+        <BreakdownChart
+          data={overview.onboardingBreakdowns.relationship}
+          mode={chartMode}
+          title="Watched relationship"
+        />
+        <BreakdownChart data={overview.onboardingBreakdowns.reason} mode={chartMode} title="Reason" />
+        <BreakdownChart data={overview.onboardingBreakdowns.worry} mode={chartMode} title="Main worry" />
+        <BreakdownChart data={overview.onboardingBreakdowns.history} mode={chartMode} title="Betrayal history" />
       </section>
     </div>
   );
 }
 
-function UsersTab({ users }: { users: AdminUser[] }) {
+function UsersTab({
+  session,
+  users,
+  onRefresh,
+}: {
+  session: Session;
+  users: AdminUser[];
+  onRefresh: () => Promise<void>;
+}) {
   const [query, setQuery] = useState("");
-  const filteredUsers = useMemo(() => {
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "email">("newest");
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [tierFilters, setTierFilters] = useState<string[]>([]);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+  const [userNotice, setUserNotice] = useState<string | null>(null);
+
+  const baseUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
+    const matchesQuery = (user: AdminUser) =>
+      !needle || user.email?.toLowerCase().includes(needle);
+    const matchesTier = (user: AdminUser) =>
+      tierFilters.length === 0 || tierFilters.includes(user.subscription_tier ?? "none");
 
-    if (!needle) {
-      return users;
+    return users.filter((user) => matchesQuery(user) && matchesTier(user));
+  }, [query, tierFilters, users]);
+
+  const statusPills = useMemo(() => {
+    const counts = baseUsers.reduce<Record<string, number>>((accumulator, user) => {
+      const key = user.subscription_status ?? "free";
+      accumulator[key] = (accumulator[key] ?? 0) + 1;
+      return accumulator;
+    }, {});
+
+    const statusesToShow = statusFilters.length > 0 ? statusFilters : ["active", "free"];
+    return statusesToShow.map((status) => ({
+      status,
+      count: counts[status] ?? 0,
+    }));
+  }, [baseUsers, statusFilters]);
+
+  const filteredUsers = useMemo(() => {
+    const matchesStatus = (user: AdminUser) =>
+      statusFilters.length === 0 || statusFilters.includes(user.subscription_status ?? "free");
+
+    const nextUsers = baseUsers.filter((user) => matchesStatus(user)).slice();
+
+    nextUsers.sort((left, right) => {
+      if (sortBy === "email") {
+        return (left.email ?? "").localeCompare(right.email ?? "");
+      }
+
+      const leftTime = left.created_at ? Date.parse(left.created_at) : 0;
+      const rightTime = right.created_at ? Date.parse(right.created_at) : 0;
+
+      return sortBy === "oldest" ? leftTime - rightTime : rightTime - leftTime;
+    });
+
+    return nextUsers;
+  }, [baseUsers, sortBy, statusFilters]);
+
+  const toggleStatusFilter = (value: string) => {
+    setStatusFilters((current) =>
+      current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value],
+    );
+  };
+
+  const toggleTierFilter = (value: string) => {
+    setTierFilters((current) =>
+      current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value],
+    );
+  };
+
+  const setUserDisabledState = async (id: string, isDisabled: boolean) => {
+    setBusyUserId(id);
+    setUserNotice(null);
+
+    try {
+      await apiFetch("/api/admin/users", session, {
+        method: "PATCH",
+        body: JSON.stringify({ id, isDisabled }),
+      });
+      setUserNotice(isDisabled ? "Account disabled." : "Account enabled.");
+      await onRefresh();
+    } catch (error) {
+      setUserNotice(error instanceof Error ? error.message : "Failed to update account access");
+    } finally {
+      setBusyUserId(null);
     }
-
-    return users.filter((user) => user.email?.toLowerCase().includes(needle));
-  }, [query, users]);
+  };
 
   return (
     <div className="tab-panel">
       <div className="toolbar">
+        <div className="toolbar-group">
+          <div className="dropdown-shell">
+            <button
+              className={`toolbar-button${sortOpen ? " active" : ""}`}
+              onClick={() => {
+                setSortOpen((current) => !current);
+                setFilterOpen(false);
+              }}
+              type="button"
+            >
+              <SlidersHorizontal size={16} />
+              Sort
+            </button>
+            {sortOpen ? (
+              <div className="dropdown-panel">
+                {[
+                  { id: "newest", label: "Newest first" },
+                  { id: "oldest", label: "Oldest first" },
+                  { id: "email", label: "Email A-Z" },
+                ].map((option) => (
+                  <button
+                    className={`dropdown-option${sortBy === option.id ? " selected" : ""}`}
+                    key={option.id}
+                    onClick={() => {
+                      setSortBy(option.id as "newest" | "oldest" | "email");
+                      setSortOpen(false);
+                    }}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="dropdown-shell">
+            <button
+              className={`toolbar-button${filterOpen ? " active" : ""}`}
+              onClick={() => {
+                setFilterOpen((current) => !current);
+                setSortOpen(false);
+              }}
+              type="button"
+            >
+              <Filter size={16} />
+              Filter
+            </button>
+            {filterOpen ? (
+              <div className="dropdown-panel wide">
+                <div className="dropdown-section">
+                  <span>Status</span>
+                  {["free", "active"].map((value) => (
+                    <label className="check-row" key={value}>
+                      <input
+                        checked={statusFilters.includes(value)}
+                        onChange={() => toggleStatusFilter(value)}
+                        type="checkbox"
+                      />
+                      {cleanLabel(value)}
+                    </label>
+                  ))}
+                </div>
+                <div className="dropdown-section">
+                  <span>Tier</span>
+                  {["weekly", "annual", "exclusive_annual"].map((value) => (
+                    <label className="check-row" key={value}>
+                      <input
+                        checked={tierFilters.includes(value)}
+                        onChange={() => toggleTierFilter(value)}
+                        type="checkbox"
+                      />
+                      {cleanLabel(value)}
+                    </label>
+                  ))}
+                </div>
+                <button
+                  className="dropdown-reset"
+                  onClick={() => {
+                    setStatusFilters([]);
+                    setTierFilters([]);
+                  }}
+                  type="button"
+                >
+                  Clear filters
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          {statusPills.map((pill) => (
+            <div className="count-pill" key={pill.status}>
+              <span>{cleanLabel(pill.status)}</span>
+              <strong>{pill.count}</strong>
+            </div>
+          ))}
+        </div>
         <div className="searchbox">
           <Search size={16} />
           <input
@@ -407,16 +664,18 @@ function UsersTab({ users }: { users: AdminUser[] }) {
           />
         </div>
       </div>
+      {userNotice ? <div className="notice">{userNotice}</div> : null}
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Email</th>
               <th>Created</th>
-              <th>Country</th>
               <th>Status</th>
               <th>Tier</th>
+              <th>Account</th>
               <th>Profiles</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -424,11 +683,24 @@ function UsersTab({ users }: { users: AdminUser[] }) {
               <tr key={user.id}>
                 <td>{user.email ?? "Unknown"}</td>
                 <td>{formatDate(user.created_at)}</td>
-                <td>{user.country ?? "Unknown"}</td>
                 <td>{user.subscription_status ?? "free"}</td>
                 <td>{user.subscription_tier ?? "none"}</td>
+                <td>{user.is_disabled ? "Disabled" : "Enabled"}</td>
                 <td>
                   {user.tracking_count ?? 0}/{user.tracking_quota ?? 0}
+                </td>
+                <td>
+                  <button
+                    className={user.is_disabled ? "" : "secondary"}
+                    disabled={busyUserId === user.id}
+                    onClick={() => setUserDisabledState(user.id, !user.is_disabled)}
+                    type="button"
+                  >
+                    {busyUserId === user.id ? (
+                      <Loader2 className="spin" size={15} />
+                    ) : null}
+                    {user.is_disabled ? "Enable account" : "Disable account"}
+                  </button>
                 </td>
               </tr>
             ))}
@@ -449,19 +721,12 @@ function CreatorsTab({
   onRefresh: () => Promise<void>;
 }) {
   const [query, setQuery] = useState("");
-  const [profileResult, setProfileResult] = useState<string | null>(null);
-  const [profileForm, setProfileForm] = useState({
-    ownerMockAccountId: "",
-    targetUsername: "",
-    sourceProfileId: "",
-    fullName: "",
-    avatarUrl: "",
-    followerCount: "",
-    followingCount: "",
-    postCount: "",
-  });
+  const [creatorEmail, setCreatorEmail] = useState("");
+  const [creatorResult, setCreatorResult] = useState<CreatorProvisionResult | null>(null);
+  const [creatorNotice, setCreatorNotice] = useState<string | null>(null);
+  const [copiedProvisioningResult, setCopiedProvisioningResult] = useState(false);
+  const [expandedCreatorIds, setExpandedCreatorIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const selectedOwnerMockAccountId = profileForm.ownerMockAccountId || creators[0]?.mock_account_id || "";
 
   const filteredCreators = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -470,82 +735,89 @@ function CreatorsTab({
       return creators;
     }
 
-    return creators
-      .map((creator) => {
-        const emailMatches = creator.email.toLowerCase().includes(needle);
-        const matchingProfiles = creator.profiles.filter((profile) => {
-          const username = profile.target_username.toLowerCase();
-          const name = profile.profile_data?.fullName?.toLowerCase() ?? "";
-          return username.includes(needle) || name.includes(needle);
-        });
-
-        if (emailMatches) {
-          return creator;
-        }
-
-        if (matchingProfiles.length === 0) {
-          return null;
-        }
-
-        return {
-          ...creator,
-          profiles: matchingProfiles,
-        };
-      })
-      .filter((creator): creator is CreatorToolAccess => Boolean(creator));
+    return creators.filter((creator) => {
+      const emailMatches = creator.email.toLowerCase().includes(needle);
+      const appUserMatches = creator.app_user_id?.toLowerCase().includes(needle) ?? false;
+      const mockAccountMatches = creator.mock_account_id.toLowerCase().includes(needle);
+      return emailMatches || appUserMatches || mockAccountMatches;
+    });
   }, [creators, query]);
 
-  const saveMockProfile = async () => {
+  const createCreator = async () => {
     setBusy(true);
-    setProfileResult(null);
+    setCreatorResult(null);
+    setCreatorNotice(null);
+    setCopiedProvisioningResult(false);
 
     try {
-      await apiFetch("/api/admin/mock-profiles", session, {
+      const result = await apiFetch<{
+        appPassword?: string | null;
+        generatedAccessCode?: string | null;
+        mode?: string;
+      }>("/api/admin/creators", session, {
         method: "POST",
         body: JSON.stringify({
-          ...profileForm,
-          ownerMockAccountId: selectedOwnerMockAccountId,
-          followerCount: Number(profileForm.followerCount || 0),
-          followingCount: Number(profileForm.followingCount || 0),
-          postCount: Number(profileForm.postCount || 0),
+          email: creatorEmail,
         }),
       });
 
-      setProfileForm({
-        ownerMockAccountId: selectedOwnerMockAccountId,
-        targetUsername: "",
-        sourceProfileId: "",
-        fullName: "",
-        avatarUrl: "",
-        followerCount: "",
-        followingCount: "",
-        postCount: "",
+      const normalizedEmail = creatorEmail.trim().toLowerCase();
+      setCreatorEmail("");
+      const rows = [
+        { label: "Email", value: normalizedEmail },
+        { label: "App password", value: result.appPassword ?? "Not returned" },
+        { label: "Tool access code", value: result.generatedAccessCode ?? "Not returned" },
+      ];
+
+      setCreatorResult({
+        title: result.mode === "updated" ? "Creator reprovisioned" : "Creator created",
+        rows,
+        copyText: rows.map((row) => `${row.label}: ${row.value}`).join("\n"),
       });
-      setProfileResult("Profile saved.");
       await onRefresh();
     } catch (error) {
-      setProfileResult(error instanceof Error ? error.message : "Failed to save profile");
+      setCreatorNotice(error instanceof Error ? error.message : "Creator creation failed");
     } finally {
       setBusy(false);
     }
   };
 
-  const deleteMockProfile = async (id: string) => {
+  const setCreatorActiveState = async (id: string, isActive: boolean) => {
     setBusy(true);
-    setProfileResult(null);
+    setCreatorResult(null);
+    setCreatorNotice(null);
 
     try {
-      await apiFetch("/api/admin/mock-profiles", session, {
-        method: "DELETE",
-        body: JSON.stringify({ id }),
+      await apiFetch("/api/admin/creators", session, {
+        method: "PATCH",
+        body: JSON.stringify({ id, isActive }),
       });
-      setProfileResult("Profile deleted.");
+      setCreatorNotice(isActive ? "Creator access enabled." : "Creator access disabled.");
       await onRefresh();
     } catch (error) {
-      setProfileResult(error instanceof Error ? error.message : "Failed to delete profile");
+      setCreatorNotice(error instanceof Error ? error.message : "Failed to update creator access");
     } finally {
       setBusy(false);
     }
+  };
+
+  const copyProvisioningResult = async () => {
+    if (!creatorResult) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(creatorResult.copyText);
+      setCopiedProvisioningResult(true);
+    } catch {
+      setCreatorNotice("Copy failed. Please copy the details manually.");
+    }
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedCreatorIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
   };
 
   return (
@@ -563,68 +835,57 @@ function CreatorsTab({
               <strong>{compactNumber(creators.filter((creator) => creator.is_active).length)}</strong>
             </div>
             <div>
-              <span>Assigned mock profiles</span>
+              <span>App-linked creators</span>
               <strong>
-                {compactNumber(
-                  creators.reduce((total, creator) => total + creator.profiles.length, 0),
-                )}
+                {compactNumber(creators.filter((creator) => Boolean(creator.app_user_id)).length)}
               </strong>
             </div>
           </div>
           <p className="muted-copy">
-            Profiles in this tab are now grouped from `creator_tool_access` through each
-            creator&apos;s `mock_account_id`.
+            This dashboard now manages creator access only. Mock profiles stay in the separate
+            creator tool.
           </p>
         </div>
 
         <div className="panel">
-          <SectionHeader eyebrow="Mock data" title="Add profile to creator" />
+          <SectionHeader eyebrow="Provisioning" title="Create creator account" />
           <div className="form-grid">
             <label>
-              Creator
-              <select
-                onChange={(event) =>
-                  setProfileForm((current) => ({
-                    ...current,
-                    ownerMockAccountId: event.target.value,
-                  }))
-                }
-                value={selectedOwnerMockAccountId}
-              >
-                <option value="">Select creator</option>
-                {creators.map((creator) => (
-                  <option key={creator.id} value={creator.mock_account_id}>
-                    {creator.email}
-                  </option>
-                ))}
-              </select>
+              Email
+              <input
+                onChange={(event) => setCreatorEmail(event.target.value)}
+                placeholder="creator@susly.app"
+                type="email"
+                value={creatorEmail}
+              />
             </label>
-            <div className="form-grid compact">
-            {Object.entries(profileForm).map(([key, value]) => (
-              key === "ownerMockAccountId" ? null : (
-              <label key={key}>
-                {cleanLabel(key)}
-                <input
-                  onChange={(event) =>
-                    setProfileForm((current) => ({
-                      ...current,
-                      [key]: event.target.value,
-                    }))
-                  }
-                  value={value}
-                />
-              </label>
-              )
-            ))}
-              <button
-                disabled={busy || !selectedOwnerMockAccountId || !profileForm.targetUsername}
-                onClick={saveMockProfile}
-              >
-                <Plus size={16} />
-                Save profile
-              </button>
-            </div>
-            {profileResult ? <p className="form-message">{profileResult}</p> : null}
+            <button disabled={busy || !creatorEmail} onClick={createCreator}>
+              <Plus size={16} />
+              Create creator
+            </button>
+            {creatorNotice ? <p className="form-message">{creatorNotice}</p> : null}
+            {creatorResult ? (
+              <div className="provisioning-result">
+                <div className="provisioning-result-header">
+                  <div className="provisioning-result-title">
+                    <strong>{creatorResult.title}</strong>
+                    <span>Credentials ready</span>
+                  </div>
+                  <button className="secondary" onClick={copyProvisioningResult} type="button">
+                    <Copy size={15} />
+                    {copiedProvisioningResult ? "Copied" : "Copy all"}
+                  </button>
+                </div>
+                <div className="provisioning-result-rows">
+                  {creatorResult.rows.map((row) => (
+                    <div className="provisioning-result-row" key={row.label}>
+                      <span className="provisioning-result-label">{row.label}</span>
+                      <strong className="provisioning-result-value">{row.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
@@ -632,65 +893,68 @@ function CreatorsTab({
       <div className="toolbar">
         <div className="searchbox">
           <Search size={16} />
-          <input
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search creator or profile"
-            value={query}
-          />
+            <input
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search creator, app user, or mock account"
+              value={query}
+            />
+          </div>
         </div>
-      </div>
 
       <div className="creator-stack">
         {filteredCreators.map((creator) => (
           <section className="panel" key={creator.id}>
-            <SectionHeader
-              eyebrow={creator.is_active ? "Active creator" : "Inactive creator"}
-              title={creator.email}
+            <button
+              className="creator-toggle"
+              onClick={() => toggleExpanded(creator.id)}
+              type="button"
             >
               <div className="creator-meta">
-                <span>{compactNumber(creator.profiles.length)} profiles</span>
+                <div>
+                  <h3>{creator.email}</h3>
+                </div>
+                <span>{creator.is_active ? "Access enabled" : "Access disabled"}</span>
                 <span>{formatDate(creator.updated_at ?? creator.created_at)}</span>
               </div>
-            </SectionHeader>
+              {expandedCreatorIds.includes(creator.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
 
-            {creator.profiles.length > 0 ? (
-              <div className="table-wrap inner">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Name</th>
-                      <th>Source ID</th>
-                      <th>Following</th>
-                      <th>Updated</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {creator.profiles.map((profile) => (
-                      <tr key={profile.id}>
-                        <td>@{profile.target_username}</td>
-                        <td>{profile.profile_data?.fullName ?? "Unknown"}</td>
-                        <td>{profile.source_profile_id ?? "None"}</td>
-                        <td>{profile.following_count}</td>
-                        <td>{formatDate(profile.updated_at)}</td>
-                        <td>
-                          <button
-                            className="icon-button"
-                            disabled={busy}
-                            onClick={() => deleteMockProfile(profile.id)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {expandedCreatorIds.includes(creator.id) ? (
+              <div className="creator-details">
+                <div className="detail-grid">
+                  <div>
+                    <span>Email</span>
+                    <strong>{creator.email}</strong>
+                  </div>
+                  <div>
+                    <span>Tool access</span>
+                    <strong>{creator.is_active ? "Enabled" : "Disabled"}</strong>
+                  </div>
+                  <div>
+                    <span>App user ID</span>
+                    <strong>{creator.app_user_id ?? "Not linked"}</strong>
+                  </div>
+                  <div>
+                    <span>Mock account ID</span>
+                    <strong>{creator.mock_account_id}</strong>
+                  </div>
+                  <div>
+                    <span>Subscription</span>
+                    <strong>{creator.subscription_status ?? "Unknown"}</strong>
+                  </div>
+                </div>
+                <div className="creator-actions">
+                  <button
+                    className={creator.is_active ? "secondary" : ""}
+                    disabled={busy}
+                    onClick={() => setCreatorActiveState(creator.id, !creator.is_active)}
+                    type="button"
+                  >
+                    {creator.is_active ? "Disable tool access" : "Enable tool access"}
+                  </button>
+                </div>
               </div>
-            ) : (
-              <p className="empty inline">No mock profiles assigned to this creator yet.</p>
-            )}
+            ) : null}
           </section>
         ))}
       </div>
@@ -807,8 +1071,7 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
       <section className="main-surface">
         <header className="topbar">
           <div>
-            <p>Dashboard</p>
-            <h1>Clarity + control</h1>
+            <h1>Susly Statistics</h1>
           </div>
             <button disabled={loading} onClick={() => loadData(session)}>
             {loading ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
@@ -826,7 +1089,9 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
           <>
             {tab === "overview" ? <OverviewTab overview={overview} /> : null}
             {tab === "onboarding" ? <OnboardingTab overview={overview} /> : null}
-            {tab === "users" ? <UsersTab users={data.users} /> : null}
+            {tab === "users" ? (
+              <UsersTab onRefresh={() => loadData(session)} session={session} users={data.users} />
+            ) : null}
             {tab === "creators" ? (
               <CreatorsTab creators={data.creators} onRefresh={() => loadData(session)} session={session} />
             ) : null}

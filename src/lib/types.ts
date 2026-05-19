@@ -46,6 +46,7 @@ export type AdminUser = {
   tracking_count: number | null;
   tracking_quota: number | null;
   country: string | null;
+  is_disabled: boolean;
 };
 
 export type MockProfile = {
@@ -69,8 +70,11 @@ export type CreatorToolAccess = {
   id: string;
   email: string;
   mock_account_id: string;
+  app_user_id: string | null;
   is_active: boolean;
   created_at: string | null;
   updated_at: string | null;
-  profiles: MockProfile[];
+  subscription_status: string | null;
+  subscription_tier: string | null;
+  tracking_quota: number | null;
 };

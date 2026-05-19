@@ -2,12 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { jsonError, requireAdmin } from "@/lib/admin-auth";
 import { normalizeDateKey } from "@/lib/format";
+import { getEffectiveSubscriptionStatus } from "@/lib/subscriptions";
 import { getAdminSupabase } from "@/lib/supabase";
 import type { BreakdownPoint, OverviewData, TrendPoint } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const DAYS = 30;
+const PAGE_SIZE = 1000;
 
 function getStartDate() {
   const start = new Date();
@@ -95,6 +97,57 @@ async function countRows(table: string, filter?: CountFilter) {
   return count ?? 0;
 }
 
+async function fetchAllRows<T extends Record<string, unknown>>(
+  table: string,
+  columns: string,
+  options?: {
+    filter?: CountFilter;
+    gte?: { column: string; value: string };
+    order?: { column: string; ascending: boolean };
+  },
+) {
+  const supabase = getAdminSupabase();
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    let request = supabase.from(table).select(columns).range(from, from + PAGE_SIZE - 1);
+
+    if (options?.filter?.kind === "eq") {
+      request = request.eq(options.filter.column, options.filter.value);
+    }
+
+    if (options?.filter?.kind === "in") {
+      request = request.in(options.filter.column, options.filter.value);
+    }
+
+    if (options?.gte) {
+      request = request.gte(options.gte.column, options.gte.value);
+    }
+
+    if (options?.order) {
+      request = request.order(options.order.column, { ascending: options.order.ascending });
+    }
+
+    const { data, error } = await request;
+
+    if (error) {
+      throw error;
+    }
+
+    const page = (data ?? []) as unknown as T[];
+    rows.push(...page);
+
+    if (page.length < PAGE_SIZE) {
+      break;
+    }
+
+    from += PAGE_SIZE;
+  }
+
+  return rows;
+}
+
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
@@ -106,7 +159,6 @@ export async function GET(request: NextRequest) {
       downloads,
       users,
       onboardingCompletions,
-      activeOrTrialUsers,
       trackedProfiles,
       activeTrackingRelationships,
       mockAccounts,
@@ -122,7 +174,6 @@ export async function GET(request: NextRequest) {
       countRows("app_analytics", { kind: "eq", column: "event_type", value: "download" }),
       countRows("users"),
       countRows("onboarding_answers"),
-      countRows("users", { kind: "in", column: "subscription_status", value: ["active", "trial"] }),
       countRows("profiles"),
       countRows("user_profiles", { kind: "eq", column: "tracking_enabled", value: true }),
       countRows("mock_accounts"),
@@ -133,36 +184,44 @@ export async function GET(request: NextRequest) {
         value: ["pending", "processing", "in_progress"],
       }),
       countRows("tracking_requests", { kind: "eq", column: "status", value: "failed" }),
-      supabase
-        .from("app_analytics")
-        .select("created_at")
-        .eq("event_type", "download")
-        .gte("created_at", startIso)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("users")
-        .select("created_at")
-        .gte("created_at", startIso)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("onboarding_answers")
-        .select(
-          "created_at, identity_answer, watch_relationship_answer, why_answer, worry_answer, betrayal_history_answer",
-        )
-        .gte("created_at", startIso)
-        .order("created_at", { ascending: true }),
-      supabase.from("users").select("subscription_status"),
+      fetchAllRows<{ created_at?: string | null }>("app_analytics", "created_at", {
+        filter: { kind: "eq", column: "event_type", value: "download" },
+        gte: { column: "created_at", value: startIso },
+        order: { column: "created_at", ascending: true },
+      }),
+      fetchAllRows<{ created_at?: string | null }>("users", "created_at", {
+        gte: { column: "created_at", value: startIso },
+        order: { column: "created_at", ascending: true },
+      }),
+      fetchAllRows<Record<string, unknown>>(
+        "onboarding_answers",
+        "created_at, identity_answer, watch_relationship_answer, why_answer, worry_answer, betrayal_history_answer",
+        {
+          gte: { column: "created_at", value: startIso },
+          order: { column: "created_at", ascending: true },
+        },
+      ),
+      fetchAllRows<{ subscription_status?: string | null; subscription_expires_at?: string | null }>(
+        "users",
+        "subscription_status, subscription_expires_at",
+      ),
       supabase.from("tracking_requests").select("status"),
     ]);
 
     const trends = buildEmptyTrend();
-    incrementTrend(trends, downloadsTrend.data ?? [], "downloads");
-    incrementTrend(trends, usersTrend.data ?? [], "users");
-    incrementTrend(trends, onboardingRows.data ?? [], "onboarding");
+    incrementTrend(trends, downloadsTrend, "downloads");
+    incrementTrend(trends, usersTrend, "users");
+    incrementTrend(trends, onboardingRows, "onboarding");
 
-    const onboardingData = (onboardingRows.data ?? []) as Array<Record<string, unknown>>;
-    const subscriptionData = (subscriptions.data ?? []) as Array<Record<string, unknown>>;
+    const onboardingData = onboardingRows as Array<Record<string, unknown>>;
+    const subscriptionData = subscriptions.map((subscription) => ({
+      subscription_status: getEffectiveSubscriptionStatus(subscription),
+    }));
     const scrapeData = (scrapeStatuses.data ?? []) as Array<Record<string, unknown>>;
+    const activeOrTrialUsers = subscriptionData.filter((subscription) => {
+      const status = subscription.subscription_status;
+      return status === "active" || status === "trial";
+    }).length;
 
     const data: OverviewData = {
       generatedAt: new Date().toISOString(),
