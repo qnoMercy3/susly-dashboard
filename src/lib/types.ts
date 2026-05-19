@@ -72,6 +72,7 @@ export type CreatorToolAccess = {
   mock_account_id: string;
   app_user_id: string | null;
   is_active: boolean;
+  app_access_enabled: boolean | null;
   created_at: string | null;
   updated_at: string | null;
   subscription_status: string | null;
