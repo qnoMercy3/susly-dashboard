@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { jsonError, requireAdmin } from "@/lib/admin-auth";
-import { getEffectiveSubscriptionStatus } from "@/lib/subscriptions";
 import { getAdminSupabase } from "@/lib/supabase";
 import type { AdminUser } from "@/lib/types";
 
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
       const { data, error } = await supabase
         .from("users")
         .select(
-          "id, email, created_at, subscription_status, subscription_tier, subscription_expires_at, tracking_count, tracking_quota",
+          "id, email, created_at, subscription_status, subscription_tier, tracking_count, tracking_quota",
         )
         .order("created_at", { ascending: false })
         .range(from, to);
@@ -71,7 +70,6 @@ export async function GET(request: NextRequest) {
 
       const page = (data ?? []).map((user) => ({
         ...user,
-        subscription_status: getEffectiveSubscriptionStatus(user),
         country: null,
         is_disabled: disabledByUserId.get(user.id) ?? false,
       }));

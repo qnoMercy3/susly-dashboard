@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { jsonError, requireAdmin } from "@/lib/admin-auth";
 import { normalizeDateKey } from "@/lib/format";
-import { getEffectiveSubscriptionStatus } from "@/lib/subscriptions";
 import { getAdminSupabase } from "@/lib/supabase";
 import type { BreakdownPoint, OverviewData, TrendPoint } from "@/lib/types";
 
@@ -201,10 +200,7 @@ export async function GET(request: NextRequest) {
           order: { column: "created_at", ascending: true },
         },
       ),
-      fetchAllRows<{ subscription_status?: string | null; subscription_expires_at?: string | null }>(
-        "users",
-        "subscription_status, subscription_expires_at",
-      ),
+      fetchAllRows<Record<string, unknown>>("users", "subscription_status"),
       supabase.from("tracking_requests").select("status"),
     ]);
 
@@ -214,9 +210,7 @@ export async function GET(request: NextRequest) {
     incrementTrend(trends, onboardingRows, "onboarding");
 
     const onboardingData = onboardingRows as Array<Record<string, unknown>>;
-    const subscriptionData = subscriptions.map((subscription) => ({
-      subscription_status: getEffectiveSubscriptionStatus(subscription),
-    }));
+    const subscriptionData = subscriptions as Array<Record<string, unknown>>;
     const scrapeData = (scrapeStatuses.data ?? []) as Array<Record<string, unknown>>;
     const activeOrTrialUsers = subscriptionData.filter((subscription) => {
       const status = subscription.subscription_status;
