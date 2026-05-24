@@ -17,7 +17,8 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -36,13 +37,13 @@ import type { Session } from "@supabase/supabase-js";
 
 import { compactNumber, formatDate, percent } from "@/lib/format";
 import { getBrowserSupabase } from "@/lib/supabase";
-import type { AdminUser, CreatorToolAccess, OverviewData } from "@/lib/types";
+import type { AdminUser, CreatorToolAccess, OnboardingData, OverviewData } from "@/lib/types";
 
-type Tab = "overview" | "onboarding" | "users" | "creators";
+export type Tab = "overview" | "onboarding" | "users" | "creators";
 
 type ApiState = {
+  onboarding: OnboardingData | null;
   overview: OverviewData | null;
-  users: AdminUser[];
   creators: CreatorToolAccess[];
 };
 
@@ -52,17 +53,23 @@ type CreatorProvisionResult = {
   copyText: string;
 };
 
+type UsersPagePayload = {
+  users: AdminUser[];
+  nextOffset: number;
+  hasMore: boolean;
+};
+
 const emptyApiState: ApiState = {
+  onboarding: null,
   overview: null,
-  users: [],
   creators: [],
 };
 
-const navItems: Array<{ id: Tab; icon: LucideIcon; label: string }> = [
-  { id: "overview", icon: BarChart3, label: "Overview" },
-  { id: "onboarding", icon: CheckCircle2, label: "Onboarding" },
-  { id: "users", icon: Users, label: "Users" },
-  { id: "creators", icon: Lock, label: "Creators" },
+const navItems: Array<{ id: Tab; href: string; icon: LucideIcon; label: string }> = [
+  { id: "overview", href: "/", icon: BarChart3, label: "Overview" },
+  { id: "onboarding", href: "/onboarding", icon: CheckCircle2, label: "Onboarding" },
+  { id: "users", href: "/users", icon: Users, label: "Users" },
+  { id: "creators", href: "/creators", icon: Lock, label: "Creators" },
 ];
 
 function cleanLabel(value: string) {
@@ -411,7 +418,7 @@ function BreakdownChart({
   );
 }
 
-function OnboardingTab({ overview }: { overview: OverviewData }) {
+function OnboardingTab({ onboarding }: { onboarding: OnboardingData }) {
   const [chartMode, setChartMode] = useState<"bar" | "pie">("bar");
 
   return (
@@ -435,15 +442,15 @@ function OnboardingTab({ overview }: { overview: OverviewData }) {
         </div>
       </div>
       <section className={`workspace-grid two${chartMode === "pie" ? " pie-mode" : ""}`}>
-        <BreakdownChart data={overview.onboardingBreakdowns.identity} mode={chartMode} title="Identity" />
+        <BreakdownChart data={onboarding.onboardingBreakdowns.identity} mode={chartMode} title="Identity" />
         <BreakdownChart
-          data={overview.onboardingBreakdowns.relationship}
+          data={onboarding.onboardingBreakdowns.relationship}
           mode={chartMode}
           title="Watched relationship"
         />
-        <BreakdownChart data={overview.onboardingBreakdowns.reason} mode={chartMode} title="Reason" />
-        <BreakdownChart data={overview.onboardingBreakdowns.worry} mode={chartMode} title="Main worry" />
-        <BreakdownChart data={overview.onboardingBreakdowns.history} mode={chartMode} title="Betrayal history" />
+        <BreakdownChart data={onboarding.onboardingBreakdowns.reason} mode={chartMode} title="Reason" />
+        <BreakdownChart data={onboarding.onboardingBreakdowns.worry} mode={chartMode} title="Main worry" />
+        <BreakdownChart data={onboarding.onboardingBreakdowns.history} mode={chartMode} title="Betrayal history" />
       </section>
     </div>
   );
@@ -451,21 +458,113 @@ function OnboardingTab({ overview }: { overview: OverviewData }) {
 
 function UsersTab({
   session,
-  users,
-  onRefresh,
+  refreshToken,
 }: {
   session: Session;
-  users: AdminUser[];
-  onRefresh: () => Promise<void>;
+  refreshToken: number;
 }) {
+  const PAGE_SIZE = 100;
   const [query, setQuery] = useState("");
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "email">("newest");
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [tierFilters, setTierFilters] = useState<string[]>([]);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
-  const [userNotice, setUserNotice] = useState<string | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingPageRef = useRef(false);
+  const hasMoreRef = useRef(true);
+  const nextOffsetRef = useRef(0);
+  const requestSerialRef = useRef(0);
+
+  const loadUsersPage = useCallback(
+    async (mode: "reset" | "append") => {
+      if (mode === "append" && loadingPageRef.current) {
+        return;
+      }
+
+      if (mode === "append" && !hasMoreRef.current) {
+        return;
+      }
+
+      const offset = mode === "reset" ? 0 : nextOffsetRef.current;
+      const requestSerial = requestSerialRef.current + 1;
+      requestSerialRef.current = requestSerial;
+      loadingPageRef.current = true;
+      setLoadingPage(true);
+      setUsersError(null);
+
+      try {
+        const payload = await apiFetch<UsersPagePayload>(
+          `/api/admin/users?offset=${offset}&limit=${PAGE_SIZE}`,
+          session,
+        );
+
+        if (requestSerial !== requestSerialRef.current) {
+          return;
+        }
+
+        setUsers((current) => {
+          if (mode === "reset") {
+            return payload.users;
+          }
+
+          const existingIds = new Set(current.map((user) => user.id));
+          return [
+            ...current,
+            ...payload.users.filter((user) => !existingIds.has(user.id)),
+          ];
+        });
+        nextOffsetRef.current = payload.nextOffset;
+        hasMoreRef.current = payload.hasMore;
+        setHasMore(payload.hasMore);
+      } catch (error) {
+        if (requestSerial === requestSerialRef.current) {
+          setUsersError(error instanceof Error ? error.message : "Failed to load users");
+        }
+      } finally {
+        if (requestSerial === requestSerialRef.current) {
+          loadingPageRef.current = false;
+          setLoadingPage(false);
+        }
+      }
+    },
+    [session],
+  );
+
+  useEffect(() => {
+    setUsers([]);
+    nextOffsetRef.current = 0;
+    hasMoreRef.current = true;
+    setHasMore(true);
+    void loadUsersPage("reset");
+  }, [loadUsersPage, refreshToken]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadUsersPage("append");
+        }
+      },
+      { rootMargin: "320px" },
+    );
+
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loadUsersPage]);
 
   const baseUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -521,24 +620,6 @@ function UsersTab({
     setTierFilters((current) =>
       current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value],
     );
-  };
-
-  const setUserDisabledState = async (id: string, isDisabled: boolean) => {
-    setBusyUserId(id);
-    setUserNotice(null);
-
-    try {
-      await apiFetch("/api/admin/users", session, {
-        method: "PATCH",
-        body: JSON.stringify({ id, isDisabled }),
-      });
-      setUserNotice(isDisabled ? "Account disabled." : "Account enabled.");
-      await onRefresh();
-    } catch (error) {
-      setUserNotice(error instanceof Error ? error.message : "Failed to update account access");
-    } finally {
-      setBusyUserId(null);
-    }
   };
 
   return (
@@ -650,7 +731,7 @@ function UsersTab({
           />
         </div>
       </div>
-      {userNotice ? <div className="notice">{userNotice}</div> : null}
+      {usersError ? <div className="notice error">{usersError}</div> : null}
       <div className="table-wrap">
         <table>
           <thead>
@@ -659,9 +740,7 @@ function UsersTab({
               <th>Created</th>
               <th>Status</th>
               <th>Tier</th>
-              <th>Account</th>
               <th>Profiles</th>
-              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -671,27 +750,24 @@ function UsersTab({
                 <td>{formatDate(user.created_at)}</td>
                 <td>{user.subscription_status ?? "free"}</td>
                 <td>{user.subscription_tier ?? "none"}</td>
-                <td>{user.is_disabled ? "Disabled" : "Enabled"}</td>
                 <td>
                   {user.tracking_count ?? 0}/{user.tracking_quota ?? 0}
-                </td>
-                <td>
-                  <button
-                    className={user.is_disabled ? "" : "secondary"}
-                    disabled={busyUserId === user.id}
-                    onClick={() => setUserDisabledState(user.id, !user.is_disabled)}
-                    type="button"
-                  >
-                    {busyUserId === user.id ? (
-                      <Loader2 className="spin" size={15} />
-                    ) : null}
-                    {user.is_disabled ? "Enable account" : "Disable account"}
-                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="load-more-sentinel" ref={sentinelRef}>
+        {loadingPage ? (
+          <Loader2 className="spin" size={18} />
+        ) : hasMore ? (
+          <button className="secondary" onClick={() => loadUsersPage("append")} type="button">
+            Load more users
+          </button>
+        ) : (
+          <span>All loaded</span>
+        )}
       </div>
     </div>
   );
@@ -980,16 +1056,29 @@ function CreatorsTab({
   );
 }
 
-export function DashboardApp({ configured, missing }: { configured: boolean; missing: string[] }) {
+export function DashboardApp({
+  configured,
+  currentTab,
+  missing,
+}: {
+  configured: boolean;
+  currentTab: Tab;
+  missing: string[];
+}) {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(configured);
-  const [tab, setTab] = useState<Tab>("overview");
   const [data, setData] = useState<ApiState>(emptyApiState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usersRefreshToken, setUsersRefreshToken] = useState(0);
 
-  const loadData = useCallback(async (activeSession: Session | null) => {
+  const loadData = useCallback(async (activeSession: Session | null, tab: Tab = currentTab) => {
     if (!activeSession) {
+      return;
+    }
+
+    if (tab === "users") {
+      setUsersRefreshToken((current) => current + 1);
       return;
     }
 
@@ -997,23 +1086,39 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
     setError(null);
 
     try {
-      const [overview, usersPayload, mockPayload] = await Promise.all([
-        apiFetch<OverviewData>("/api/admin/overview", activeSession),
-        apiFetch<{ users: AdminUser[] }>("/api/admin/users", activeSession),
-        apiFetch<{ creators: CreatorToolAccess[] }>("/api/admin/creators", activeSession),
-      ]);
+      if (tab === "creators") {
+        const creatorsPayload = await apiFetch<{ creators: CreatorToolAccess[] }>(
+          "/api/admin/creators",
+          activeSession,
+        );
 
-      setData({
+        setData((current) => ({
+          ...current,
+          creators: creatorsPayload.creators,
+        }));
+        return;
+      }
+
+      if (tab === "onboarding") {
+        const onboarding = await apiFetch<OnboardingData>("/api/admin/onboarding", activeSession);
+        setData((current) => ({
+          ...current,
+          onboarding,
+        }));
+        return;
+      }
+
+      const overview = await apiFetch<OverviewData>("/api/admin/overview", activeSession);
+      setData((current) => ({
+        ...current,
         overview,
-        users: usersPayload.users,
-        creators: mockPayload.creators,
-      });
+      }));
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentTab]);
 
   useEffect(() => {
     if (!configured) {
@@ -1026,14 +1131,14 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
       setSession(sessionData.session);
       setAuthLoading(false);
       if (sessionData.session) {
-        void loadData(sessionData.session);
+        void loadData(sessionData.session, currentTab);
       }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (nextSession) {
-        void loadData(nextSession);
+        void loadData(nextSession, currentTab);
       } else {
         setData(emptyApiState);
       }
@@ -1042,7 +1147,7 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [configured, loadData]);
+  }, [configured, currentTab, loadData]);
 
   if (!configured) {
     return <SetupPanel missing={missing} />;
@@ -1060,6 +1165,7 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
     return <LoginPanel />;
   }
 
+  const onboarding = data.onboarding;
   const overview = data.overview;
 
   return (
@@ -1070,15 +1176,15 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
           <p>Internal dashboard</p>
         </div>
         <nav>
-          {navItems.map(({ id, icon: Icon, label }) => (
-            <button
-              className={tab === id ? "active" : ""}
+          {navItems.map(({ href, id, icon: Icon, label }) => (
+            <Link
+              className={currentTab === id ? "active" : ""}
+              href={href}
               key={id}
-              onClick={() => setTab(id)}
             >
               <Icon size={17} />
               {label}
-            </button>
+            </Link>
           ))}
         </nav>
         <button className="signout" onClick={() => getBrowserSupabase().auth.signOut()}>
@@ -1091,7 +1197,7 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
           <div>
             <h1>Susly Statistics</h1>
           </div>
-            <button disabled={loading} onClick={() => loadData(session)}>
+          <button disabled={loading} onClick={() => loadData(session, currentTab)}>
             {loading ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
             Refresh
           </button>
@@ -1099,19 +1205,31 @@ export function DashboardApp({ configured, missing }: { configured: boolean; mis
 
         {error ? <div className="notice error">{error}</div> : null}
 
-        {!overview ? (
+        {currentTab === "overview" && !overview ? (
+          <div className="loading-shell in-app">
+            <Loader2 className="spin" />
+          </div>
+        ) : currentTab === "onboarding" && !onboarding ? (
+          <div className="loading-shell in-app">
+            <Loader2 className="spin" />
+          </div>
+        ) : currentTab === "creators" && loading && data.creators.length === 0 ? (
           <div className="loading-shell in-app">
             <Loader2 className="spin" />
           </div>
         ) : (
           <>
-            {tab === "overview" ? <OverviewTab overview={overview} /> : null}
-            {tab === "onboarding" ? <OnboardingTab overview={overview} /> : null}
-            {tab === "users" ? (
-              <UsersTab onRefresh={() => loadData(session)} session={session} users={data.users} />
+            {currentTab === "overview" && overview ? <OverviewTab overview={overview} /> : null}
+            {currentTab === "onboarding" && onboarding ? <OnboardingTab onboarding={onboarding} /> : null}
+            {currentTab === "users" ? (
+              <UsersTab refreshToken={usersRefreshToken} session={session} />
             ) : null}
-            {tab === "creators" ? (
-              <CreatorsTab creators={data.creators} onRefresh={() => loadData(session)} session={session} />
+            {currentTab === "creators" ? (
+              <CreatorsTab
+                creators={data.creators}
+                onRefresh={() => loadData(session, "creators")}
+                session={session}
+              />
             ) : null}
           </>
         )}

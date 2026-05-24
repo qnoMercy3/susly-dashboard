@@ -198,6 +198,31 @@ Call this after a creator successfully logs in with the creator tool credentials
 }
 ```
 
+### 5. Mark app mock account login completed
+
+`PATCH /functions/v1/client-creator-accounts`
+
+Call this after a creator successfully logs in to the app mock account with the app credentials.
+
+#### Request body
+
+```json
+{
+  "id": "creator-id",
+  "appLoginCompleted": true
+}
+```
+
+#### Expected response
+
+```json
+{
+  "success": true,
+  "id": "creator-id",
+  "appLoginCompleted": true
+}
+```
+
 ## UI Requirements
 
 Build a creators management view with:

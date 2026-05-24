@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jsonError, requireAdmin } from "@/lib/admin-auth";
 import {
   listCreatorAccounts,
+  markCreatorAppLoginCompleted,
   markCreatorToolLoginCompleted,
   setCreatorAccountEnabledState,
 } from "@/lib/creator-accounts";
@@ -10,6 +11,7 @@ import { invokeCreatorProvisionFunction } from "@/lib/creator-provisioning";
 
 type CreatorUpdateInput = {
   id?: string;
+  appLoginCompleted?: boolean;
   isActive?: boolean;
   creatorToolLoginCompleted?: boolean;
 };
@@ -56,6 +58,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "Creator ID is required." }, { status: 400 });
+    }
+
+    if (body.appLoginCompleted === true) {
+      await markCreatorAppLoginCompleted(id);
+      return NextResponse.json({ success: true });
     }
 
     if (body.creatorToolLoginCompleted === true) {

@@ -1,8 +1,8 @@
 import { DashboardApp } from "@/components/DashboardApp";
 import { getEnvStatus } from "@/lib/env";
 
-export default function Home() {
+export default function UsersPage() {
   const env = getEnvStatus();
 
-  return <DashboardApp configured={env.configured} currentTab="overview" missing={env.missing} />;
+  return <DashboardApp configured={env.configured} currentTab="users" missing={env.missing} />;
 }

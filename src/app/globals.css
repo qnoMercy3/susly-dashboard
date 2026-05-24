@@ -234,15 +234,27 @@ button.secondary {
   margin-top: 2rem;
 }
 
+.sidebar nav a,
 .sidebar nav button,
 .signout {
+  align-items: center;
+  border: 0;
   background: transparent;
+  border-radius: 999px;
   color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: 0.5rem;
   justify-content: flex-start;
   padding: 0.8rem 0.9rem;
+  text-decoration: none;
+  transition: 180ms ease;
   width: 100%;
 }
 
+.sidebar nav a.active,
+.sidebar nav a:hover,
 .sidebar nav button.active,
 .sidebar nav button:hover,
 .signout:hover {
@@ -842,6 +854,14 @@ tbody tr:hover {
   justify-content: flex-end;
 }
 
+.load-more-sentinel {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+  min-height: 4rem;
+}
+
 .icon-button {
   background: rgba(217, 77, 134, 0.12);
   color: var(--danger);
@@ -889,6 +909,7 @@ tbody tr:hover {
     flex-wrap: wrap;
   }
 
+  .sidebar nav a,
   .sidebar nav button,
   .signout {
     width: auto;

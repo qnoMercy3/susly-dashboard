@@ -327,14 +327,16 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
     .map((row) => (typeof row.mock_account_id === "string" ? row.mock_account_id : null))
     .filter((value): value is string => Boolean(value));
 
-  const mockAccountsById = new Map<string, { user_id: string | null }>();
+  const mockAccountsById = new Map<
+    string,
+    { user_id: string | null; app_login_completed_at: string | null }
+  >();
   const appAccessByUserId = new Map<string, boolean>();
-  const appLoginByUserId = new Map<string, string | null>();
 
   if (mockAccountIds.length > 0) {
     const { data: mockAccountRows, error: mockAccountError } = await supabase
       .from("mock_accounts")
-      .select("id, user_id")
+      .select("id, user_id, app_login_completed_at")
       .in("id", mockAccountIds);
 
     if (mockAccountError) {
@@ -348,6 +350,8 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
     (mockAccountRows ?? []).forEach((row) => {
       mockAccountsById.set(String(row.id), {
         user_id: typeof row.user_id === "string" ? row.user_id : null,
+        app_login_completed_at:
+          typeof row.app_login_completed_at === "string" ? row.app_login_completed_at : null,
       });
     });
 
@@ -360,7 +364,6 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
         }
 
         appAccessByUserId.set(userId, !isBanned(data.user?.banned_until));
-        appLoginByUserId.set(userId, data.user?.last_sign_in_at ?? null);
       }),
     );
   }
@@ -369,7 +372,7 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
     const mockAccountId = String(row.mock_account_id);
     const mockAccount = mockAccountsById.get(mockAccountId);
     const appUserId = mockAccount?.user_id ?? null;
-    const appLoginCompletedAt = appUserId ? (appLoginByUserId.get(appUserId) ?? null) : null;
+    const appLoginCompletedAt = mockAccount?.app_login_completed_at ?? null;
     const creatorToolLoginCompletedAt =
       typeof row.creator_tool_login_completed_at === "string"
         ? row.creator_tool_login_completed_at
@@ -390,6 +393,34 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
       updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
     };
   });
+}
+
+export async function markCreatorAppLoginCompleted(
+  supabase: ReturnType<typeof createClient>,
+  id: string,
+) {
+  const { data: creatorAccess, error: creatorLookupError } = await supabase
+    .from("creator_tool_access")
+    .select("mock_account_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (creatorLookupError) {
+    throw new CreatorAccountsError(500, `Unable to load creator: ${creatorLookupError.message}`);
+  }
+
+  const mockAccountId = creatorAccess?.mock_account_id ?? id;
+
+  const { error } = await supabase
+    .from("mock_accounts")
+    .update({
+      app_login_completed_at: new Date().toISOString(),
+    })
+    .eq("id", mockAccountId);
+
+  if (error) {
+    throw new CreatorAccountsError(500, `Unable to update app login flag: ${error.message}`);
+  }
 }
 
 export async function markCreatorToolLoginCompleted(

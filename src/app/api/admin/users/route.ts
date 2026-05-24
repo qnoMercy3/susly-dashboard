@@ -6,109 +6,47 @@ import type { AdminUser } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const PAGE_SIZE = 1000;
-const AUTH_PAGE_SIZE = 200;
-
-type UserUpdateInput = {
-  id?: string;
-  isDisabled?: boolean;
-};
-
-function isDisabledFromBannedUntil(value: string | null | undefined) {
-  if (!value) {
-    return false;
-  }
-
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) && timestamp > Date.now();
-}
+const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 100;
 
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request);
 
     const supabase = getAdminSupabase();
-    const rows: AdminUser[] = [];
-    const disabledByUserId = new Map<string, boolean>();
-    let from = 0;
-    let authPage = 1;
+    const url = new URL(request.url);
+    const offsetValue = Number.parseInt(url.searchParams.get("offset") ?? "0", 10);
+    const limitValue = Number.parseInt(url.searchParams.get("limit") ?? String(DEFAULT_PAGE_SIZE), 10);
+    const offset = Number.isFinite(offsetValue) && offsetValue > 0 ? offsetValue : 0;
+    const limit =
+      Number.isFinite(limitValue) && limitValue > 0
+        ? Math.min(limitValue, MAX_PAGE_SIZE)
+        : DEFAULT_PAGE_SIZE;
+    const to = offset + limit - 1;
 
-    while (true) {
-      const { data, error } = await supabase.auth.admin.listUsers({
-        page: authPage,
-        perPage: AUTH_PAGE_SIZE,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      for (const user of data.users) {
-        disabledByUserId.set(user.id, isDisabledFromBannedUntil(user.banned_until));
-      }
-
-      if (data.users.length < AUTH_PAGE_SIZE) {
-        break;
-      }
-
-      authPage += 1;
-    }
-
-    while (true) {
-      const to = from + PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from("users")
-        .select(
-          "id, email, created_at, subscription_status, subscription_tier, tracking_count, tracking_quota",
-        )
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (error) {
-        throw error;
-      }
-
-      const page = (data ?? []).map((user) => ({
-        ...user,
-        country: null,
-        is_disabled: disabledByUserId.get(user.id) ?? false,
-      }));
-
-      rows.push(...page);
-
-      if ((data ?? []).length < PAGE_SIZE) {
-        break;
-      }
-
-      from += PAGE_SIZE;
-    }
-
-    return NextResponse.json({ users: rows });
-  } catch (error) {
-    return jsonError(error);
-  }
-}
-
-export async function PATCH(request: NextRequest) {
-  try {
-    await requireAdmin(request);
-
-    const body = (await request.json()) as UserUpdateInput;
-    const id = typeof body.id === "string" ? body.id.trim() : "";
-
-    if (!id || typeof body.isDisabled !== "boolean") {
-      return NextResponse.json({ error: "User ID and disabled state are required." }, { status: 400 });
-    }
-
-    const { error } = await getAdminSupabase().auth.admin.updateUserById(id, {
-      ban_duration: body.isDisabled ? "876000h" : "none",
-    });
+    const { data, error } = await supabase
+      .from("users")
+      .select(
+        "id, email, created_at, subscription_status, subscription_tier, tracking_count, tracking_quota",
+      )
+      .order("created_at", { ascending: false })
+      .range(offset, to);
 
     if (error) {
       throw error;
     }
 
-    return NextResponse.json({ success: true });
+    const users: AdminUser[] = (data ?? []).map((user) => ({
+      ...user,
+      country: null,
+      is_disabled: false,
+    }));
+
+    return NextResponse.json({
+      users,
+      nextOffset: offset + users.length,
+      hasMore: users.length === limit,
+    });
   } catch (error) {
     return jsonError(error);
   }

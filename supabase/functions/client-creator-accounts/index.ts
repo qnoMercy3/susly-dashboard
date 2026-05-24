@@ -4,6 +4,7 @@ import {
   creatorCorsHeaders,
   creatorJson,
   listCreatorAccounts,
+  markCreatorAppLoginCompleted,
   markCreatorToolLoginCompleted,
   normalizeEmail,
   provisionCreatorAccount,
@@ -56,7 +57,12 @@ Deno.serve(async (request) => {
     }
 
     if (request.method === "PATCH") {
-      let input: { id?: unknown; enabled?: unknown; creatorToolLoginCompleted?: unknown };
+      let input: {
+        id?: unknown;
+        enabled?: unknown;
+        appLoginCompleted?: unknown;
+        creatorToolLoginCompleted?: unknown;
+      };
       try {
         input = await request.json();
       } catch {
@@ -65,10 +71,21 @@ Deno.serve(async (request) => {
 
       const id = typeof input.id === "string" ? input.id.trim() : "";
       const enabled = typeof input.enabled === "boolean" ? input.enabled : null;
+      const appLoginCompleted = input.appLoginCompleted === true;
       const creatorToolLoginCompleted = input.creatorToolLoginCompleted === true;
 
       if (!id) {
         return creatorJson({ error: "Creator ID is required." }, 400);
+      }
+
+      if (appLoginCompleted) {
+        await markCreatorAppLoginCompleted(supabase, id);
+
+        return creatorJson({
+          success: true,
+          id,
+          appLoginCompleted: true,
+        });
       }
 
       if (creatorToolLoginCompleted) {

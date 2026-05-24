@@ -37,6 +37,11 @@ export type OverviewData = {
   scrapeStatusBreakdown: BreakdownPoint[];
 };
 
+export type OnboardingData = {
+  generatedAt: string;
+  onboardingBreakdowns: OverviewData["onboardingBreakdowns"];
+};
+
 export type AdminUser = {
   id: string;
   email: string | null;
