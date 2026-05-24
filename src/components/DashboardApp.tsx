@@ -126,6 +126,20 @@ function SectionHeader({
   );
 }
 
+function LoginFlag({
+  completed,
+  label,
+}: {
+  completed: boolean;
+  label: string;
+}) {
+  return (
+    <span className={completed ? "login-flag complete" : "login-flag"}>
+      {completed ? "Completed" : "Pending"} {label}
+    </span>
+  );
+}
+
 function LoginPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -147,31 +161,6 @@ function LoginPanel() {
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Sign in failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendMagicLink = async () => {
-    setLoading(true);
-    setStatus(null);
-
-    try {
-      const { error } = await getBrowserSupabase().auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin,
-          shouldCreateUser: false,
-        },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      setStatus("Magic link sent. Open it from the same browser to continue.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Magic link failed");
     } finally {
       setLoading(false);
     }
@@ -215,9 +204,6 @@ function LoginPanel() {
           <button disabled={loading || !email || !password} onClick={signInWithPassword}>
             {loading ? <Loader2 className="spin" size={16} /> : null}
             Sign in
-          </button>
-          <button className="secondary" disabled={loading || !email} onClick={sendMagicLink}>
-            Send magic link
           </button>
         </div>
 
@@ -840,6 +826,20 @@ function CreatorsTab({
                 {compactNumber(creators.filter((creator) => Boolean(creator.app_user_id)).length)}
               </strong>
             </div>
+            <div>
+              <span>App logins</span>
+              <strong>
+                {compactNumber(creators.filter((creator) => creator.app_login_completed).length)}
+              </strong>
+            </div>
+            <div>
+              <span>Tool logins</span>
+              <strong>
+                {compactNumber(
+                  creators.filter((creator) => creator.creator_tool_login_completed).length,
+                )}
+              </strong>
+            </div>
           </div>
           <p className="muted-copy">
             This dashboard now manages creator access only. Mock profiles stay in the separate
@@ -893,13 +893,13 @@ function CreatorsTab({
       <div className="toolbar">
         <div className="searchbox">
           <Search size={16} />
-            <input
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search creator, app user, or mock account"
-              value={query}
-            />
-          </div>
+          <input
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search creator, app user, or mock account"
+            value={query}
+          />
         </div>
+      </div>
 
       <div className="creator-stack">
         {filteredCreators.map((creator) => (
@@ -914,6 +914,8 @@ function CreatorsTab({
                   <h3>{creator.email}</h3>
                 </div>
                 <span>{creator.is_active ? "Access enabled" : "Access disabled"}</span>
+                <LoginFlag completed={creator.app_login_completed} label="app login" />
+                <LoginFlag completed={creator.creator_tool_login_completed} label="tool login" />
                 <span>{formatDate(creator.updated_at ?? creator.created_at)}</span>
               </div>
               {expandedCreatorIds.includes(creator.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -929,6 +931,22 @@ function CreatorsTab({
                   <div>
                     <span>Tool access</span>
                     <strong>{creator.is_active ? "Enabled" : "Disabled"}</strong>
+                  </div>
+                  <div>
+                    <span>App login</span>
+                    <strong>
+                      {creator.app_login_completed
+                        ? formatDate(creator.app_login_completed_at)
+                        : "Not completed"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Creator tool login</span>
+                    <strong>
+                      {creator.creator_tool_login_completed
+                        ? formatDate(creator.creator_tool_login_completed_at)
+                        : "Not completed"}
+                    </strong>
                   </div>
                   <div>
                     <span>App user ID</span>

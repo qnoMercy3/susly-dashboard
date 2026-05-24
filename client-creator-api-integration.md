@@ -69,6 +69,10 @@ curl -X GET https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator
       "email": "creator@susly.app",
       "toolAccessEnabled": true,
       "appAccessEnabled": true,
+      "appLoginCompleted": true,
+      "appLoginCompletedAt": "2026-05-19T10:00:00.000Z",
+      "creatorToolLoginCompleted": true,
+      "creatorToolLoginCompletedAt": "2026-05-19T10:00:00.000Z",
       "appUserId": "uuid",
       "mockAccountId": "uuid",
       "createdAt": "2026-05-19T10:00:00.000Z",
@@ -169,6 +173,31 @@ curl -X PATCH https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creat
 - `enabled: false` disables both tool access and app/mock access
 - `enabled: true` enables both again
 
+### 4. Mark creator tool login completed
+
+`PATCH /functions/v1/client-creator-accounts`
+
+Call this after a creator successfully logs in with the creator tool credentials.
+
+#### Request body
+
+```json
+{
+  "id": "creator-id",
+  "creatorToolLoginCompleted": true
+}
+```
+
+#### Expected response
+
+```json
+{
+  "success": true,
+  "id": "creator-id",
+  "creatorToolLoginCompleted": true
+}
+```
+
 ## UI Requirements
 
 Build a creators management view with:
@@ -179,6 +208,8 @@ Each row/card should show:
 - email
 - tool access status
 - app access status
+- app login completed status
+- creator tool login completed status
 - created date
 - updated date
 - enable/disable button

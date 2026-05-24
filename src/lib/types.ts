@@ -73,6 +73,10 @@ export type CreatorToolAccess = {
   app_user_id: string | null;
   is_active: boolean;
   app_access_enabled: boolean | null;
+  app_login_completed: boolean;
+  app_login_completed_at: string | null;
+  creator_tool_login_completed: boolean;
+  creator_tool_login_completed_at: string | null;
   created_at: string | null;
   updated_at: string | null;
   subscription_status: string | null;

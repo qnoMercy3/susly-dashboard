@@ -4,6 +4,7 @@ import {
   creatorCorsHeaders,
   creatorJson,
   listCreatorAccounts,
+  markCreatorToolLoginCompleted,
   normalizeEmail,
   provisionCreatorAccount,
   requireClientApiKey,
@@ -55,7 +56,7 @@ Deno.serve(async (request) => {
     }
 
     if (request.method === "PATCH") {
-      let input: { id?: unknown; enabled?: unknown };
+      let input: { id?: unknown; enabled?: unknown; creatorToolLoginCompleted?: unknown };
       try {
         input = await request.json();
       } catch {
@@ -64,9 +65,24 @@ Deno.serve(async (request) => {
 
       const id = typeof input.id === "string" ? input.id.trim() : "";
       const enabled = typeof input.enabled === "boolean" ? input.enabled : null;
+      const creatorToolLoginCompleted = input.creatorToolLoginCompleted === true;
 
-      if (!id || enabled === null) {
-        return creatorJson({ error: "Creator ID and enabled state are required." }, 400);
+      if (!id) {
+        return creatorJson({ error: "Creator ID is required." }, 400);
+      }
+
+      if (creatorToolLoginCompleted) {
+        await markCreatorToolLoginCompleted(supabase, id);
+
+        return creatorJson({
+          success: true,
+          id,
+          creatorToolLoginCompleted: true,
+        });
+      }
+
+      if (enabled === null) {
+        return creatorJson({ error: "Creator enabled state is required." }, 400);
       }
 
       await setCreatorAccountEnabledState(supabase, id, enabled);

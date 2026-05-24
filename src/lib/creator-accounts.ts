@@ -12,18 +12,37 @@ function isBanned(value: string | null | undefined) {
   return Number.isFinite(timestamp) && timestamp > Date.now();
 }
 
-export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
-  const supabase = getAdminSupabase();
-  const { data: creatorRows, error: creatorError } = await supabase
+async function loadCreatorAccessRows(supabase: ReturnType<typeof getAdminSupabase>) {
+  const columns =
+    "id, email, mock_account_id, is_active, creator_tool_login_completed_at, created_at, updated_at";
+  const response = await supabase
+    .from("creator_tool_access")
+    .select(columns)
+    .order("created_at", { ascending: false });
+
+  if (!response.error) {
+    return response.data ?? [];
+  }
+
+  if (!response.error.message.includes("creator_tool_login_completed_at")) {
+    throw response.error;
+  }
+
+  const fallbackResponse = await supabase
     .from("creator_tool_access")
     .select("id, email, mock_account_id, is_active, created_at, updated_at")
     .order("created_at", { ascending: false });
 
-  if (creatorError) {
-    throw creatorError;
+  if (fallbackResponse.error) {
+    throw fallbackResponse.error;
   }
 
-  const creators = (creatorRows ?? []) as Array<Record<string, unknown>>;
+  return fallbackResponse.data ?? [];
+}
+
+export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
+  const supabase = getAdminSupabase();
+  const creators = (await loadCreatorAccessRows(supabase)) as Array<Record<string, unknown>>;
   const mockAccountIds = creators
     .map((row) => (typeof row.mock_account_id === "string" ? row.mock_account_id : null))
     .filter((value): value is string => Boolean(value));
@@ -38,6 +57,7 @@ export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
     }
   >();
   const appAccessByUserId = new Map<string, boolean>();
+  const appLoginByUserId = new Map<string, string | null>();
 
   if (mockAccountIds.length > 0) {
     const { data: mockAccountRows, error: mockAccountError } = await supabase
@@ -88,6 +108,7 @@ export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
           }
 
           appAccessByUserId.set(userId, !isBanned(data.user?.banned_until));
+          appLoginByUserId.set(userId, data.user?.last_sign_in_at ?? null);
         }),
       );
     }
@@ -98,6 +119,11 @@ export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
     const mockAccount = mockAccountsById.get(mockAccountId);
     const appUserId = mockAccount?.user_id ?? null;
     const appUser = appUserId ? usersById.get(appUserId) : null;
+    const appLoginCompletedAt = appUserId ? (appLoginByUserId.get(appUserId) ?? null) : null;
+    const creatorToolLoginCompletedAt =
+      typeof row.creator_tool_login_completed_at === "string"
+        ? row.creator_tool_login_completed_at
+        : null;
 
     return {
       id: String(row.id),
@@ -111,8 +137,26 @@ export async function listCreatorAccounts(): Promise<CreatorToolAccess[]> {
       subscription_tier: appUser?.subscription_tier ?? null,
       tracking_quota: appUser?.tracking_quota ?? null,
       app_access_enabled: appUserId ? (appAccessByUserId.get(appUserId) ?? null) : null,
+      app_login_completed: Boolean(appLoginCompletedAt),
+      app_login_completed_at: appLoginCompletedAt,
+      creator_tool_login_completed: Boolean(creatorToolLoginCompletedAt),
+      creator_tool_login_completed_at: creatorToolLoginCompletedAt,
     };
   });
+}
+
+export async function markCreatorToolLoginCompleted(id: string) {
+  const supabase = getAdminSupabase();
+  const { error } = await supabase
+    .from("creator_tool_access")
+    .update({
+      creator_tool_login_completed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function setCreatorAccountEnabledState(id: string, enabled: boolean) {

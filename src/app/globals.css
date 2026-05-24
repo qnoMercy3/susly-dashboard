@@ -769,6 +769,25 @@ tbody tr:hover {
   margin-top: 0.2rem;
 }
 
+.login-flag {
+  align-items: center;
+  background: rgba(125, 97, 114, 0.1);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  min-height: 1.65rem;
+  padding: 0.35rem 0.6rem;
+  text-transform: uppercase;
+}
+
+.login-flag.complete {
+  background: rgba(168, 78, 219, 0.12);
+  color: var(--success);
+}
+
 .creator-toggle {
   align-items: center;
   background: transparent;

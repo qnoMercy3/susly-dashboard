@@ -85,6 +85,34 @@ function isBanned(value: string | null | undefined) {
   return Number.isFinite(timestamp) && timestamp > Date.now();
 }
 
+async function loadCreatorAccessRows(supabase: ReturnType<typeof createClient>) {
+  const columns =
+    "id, email, mock_account_id, is_active, creator_tool_login_completed_at, created_at, updated_at";
+  const response = await supabase
+    .from("creator_tool_access")
+    .select(columns)
+    .order("created_at", { ascending: false });
+
+  if (!response.error) {
+    return response.data ?? [];
+  }
+
+  if (!response.error.message.includes("creator_tool_login_completed_at")) {
+    throw new CreatorAccountsError(500, `Unable to load creators: ${response.error.message}`);
+  }
+
+  const fallbackResponse = await supabase
+    .from("creator_tool_access")
+    .select("id, email, mock_account_id, is_active, created_at, updated_at")
+    .order("created_at", { ascending: false });
+
+  if (fallbackResponse.error) {
+    throw new CreatorAccountsError(500, `Unable to load creators: ${fallbackResponse.error.message}`);
+  }
+
+  return fallbackResponse.data ?? [];
+}
+
 async function findAuthUserByEmail(
   supabase: ReturnType<typeof createClient>,
   email: string,
@@ -294,22 +322,14 @@ export async function provisionCreatorAccount(
 }
 
 export async function listCreatorAccounts(supabase: ReturnType<typeof createClient>) {
-  const { data: creatorRows, error: creatorError } = await supabase
-    .from("creator_tool_access")
-    .select("id, email, mock_account_id, is_active, created_at, updated_at")
-    .order("created_at", { ascending: false });
-
-  if (creatorError) {
-    throw new CreatorAccountsError(500, `Unable to load creators: ${creatorError.message}`);
-  }
-
-  const creators = (creatorRows ?? []) as Array<Record<string, unknown>>;
+  const creators = (await loadCreatorAccessRows(supabase)) as Array<Record<string, unknown>>;
   const mockAccountIds = creators
     .map((row) => (typeof row.mock_account_id === "string" ? row.mock_account_id : null))
     .filter((value): value is string => Boolean(value));
 
   const mockAccountsById = new Map<string, { user_id: string | null }>();
   const appAccessByUserId = new Map<string, boolean>();
+  const appLoginByUserId = new Map<string, string | null>();
 
   if (mockAccountIds.length > 0) {
     const { data: mockAccountRows, error: mockAccountError } = await supabase
@@ -340,6 +360,7 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
         }
 
         appAccessByUserId.set(userId, !isBanned(data.user?.banned_until));
+        appLoginByUserId.set(userId, data.user?.last_sign_in_at ?? null);
       }),
     );
   }
@@ -348,18 +369,43 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
     const mockAccountId = String(row.mock_account_id);
     const mockAccount = mockAccountsById.get(mockAccountId);
     const appUserId = mockAccount?.user_id ?? null;
+    const appLoginCompletedAt = appUserId ? (appLoginByUserId.get(appUserId) ?? null) : null;
+    const creatorToolLoginCompletedAt =
+      typeof row.creator_tool_login_completed_at === "string"
+        ? row.creator_tool_login_completed_at
+        : null;
 
     return {
       id: String(row.id),
       email: String(row.email),
       toolAccessEnabled: Boolean(row.is_active),
       appAccessEnabled: appUserId ? (appAccessByUserId.get(appUserId) ?? false) : null,
+      appLoginCompleted: Boolean(appLoginCompletedAt),
+      appLoginCompletedAt,
+      creatorToolLoginCompleted: Boolean(creatorToolLoginCompletedAt),
+      creatorToolLoginCompletedAt,
       appUserId,
       mockAccountId,
       createdAt: typeof row.created_at === "string" ? row.created_at : null,
       updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
     };
   });
+}
+
+export async function markCreatorToolLoginCompleted(
+  supabase: ReturnType<typeof createClient>,
+  id: string,
+) {
+  const { error } = await supabase
+    .from("creator_tool_access")
+    .update({
+      creator_tool_login_completed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new CreatorAccountsError(500, `Unable to update creator login flag: ${error.message}`);
+  }
 }
 
 export async function setCreatorAccountEnabledState(

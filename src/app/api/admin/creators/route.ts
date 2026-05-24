@@ -1,12 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { jsonError, requireAdmin } from "@/lib/admin-auth";
-import { listCreatorAccounts, setCreatorAccountEnabledState } from "@/lib/creator-accounts";
+import {
+  listCreatorAccounts,
+  markCreatorToolLoginCompleted,
+  setCreatorAccountEnabledState,
+} from "@/lib/creator-accounts";
 import { invokeCreatorProvisionFunction } from "@/lib/creator-provisioning";
 
 type CreatorUpdateInput = {
   id?: string;
   isActive?: boolean;
+  creatorToolLoginCompleted?: boolean;
 };
 
 export const dynamic = "force-dynamic";
@@ -49,8 +54,17 @@ export async function PATCH(request: NextRequest) {
     const body = (await request.json()) as CreatorUpdateInput;
     const id = typeof body.id === "string" ? body.id.trim() : "";
 
-    if (!id || typeof body.isActive !== "boolean") {
-      return NextResponse.json({ error: "Creator ID and active state are required." }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "Creator ID is required." }, { status: 400 });
+    }
+
+    if (body.creatorToolLoginCompleted === true) {
+      await markCreatorToolLoginCompleted(id);
+      return NextResponse.json({ success: true });
+    }
+
+    if (typeof body.isActive !== "boolean") {
+      return NextResponse.json({ error: "Creator active state is required." }, { status: 400 });
     }
 
     await setCreatorAccountEnabledState(id, body.isActive);
