@@ -1,0 +1,212 @@
+{
+  "/Users/milan/Maurice/susly-dashboard/postcss.config.mjs": {
+    "mtime": 1777324971.1864998,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "/Users/milan/Maurice/susly-dashboard/package.json": {
+    "mtime": 1777325022.5676937,
+    "ast_hash": "3e74fa860eb3e002835bc13cd84b3c24",
+    "semantic_hash": "3e74fa860eb3e002835bc13cd84b3c24"
+  },
+  "/Users/milan/Maurice/susly-dashboard/tsconfig.json": {
+    "mtime": 1777576015.9554641,
+    "ast_hash": "7019b37fd667cb060d337b2e6a10ec2f",
+    "semantic_hash": "7019b37fd667cb060d337b2e6a10ec2f"
+  },
+  "/Users/milan/Maurice/susly-dashboard/eslint.config.mjs": {
+    "mtime": 1777324971.1863256,
+    "ast_hash": "dfa1f5f6a7037bf39dc510f30b180002",
+    "semantic_hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "/Users/milan/Maurice/susly-dashboard/next.config.ts": {
+    "mtime": 1777324971.1864667,
+    "ast_hash": "9b77af189a21a7a64e4bd7a426f64176",
+    "semantic_hash": "9b77af189a21a7a64e4bd7a426f64176"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/migrations/20260524212446_add_mock_account_app_login_flag.sql": {
+    "mtime": 1779657875.560886,
+    "ast_hash": "cee1a5737e106189b25bfae17fc82c96",
+    "semantic_hash": "cee1a5737e106189b25bfae17fc82c96"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/migrations/20260524140546_add_creator_login_flags.sql": {
+    "mtime": 1779631429.310364,
+    "ast_hash": "39ce17798d79832c464474ec0bc4e8d2",
+    "semantic_hash": "39ce17798d79832c464474ec0bc4e8d2"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/.temp/linked-project.json": {
+    "mtime": 1779658824.5634212,
+    "ast_hash": "2715b2e8666a5dcbe6969926637ffe11",
+    "semantic_hash": "2715b2e8666a5dcbe6969926637ffe11"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/functions/admin-create-creator/deno.json": {
+    "mtime": 1777575990.74563,
+    "ast_hash": "50e79223b7557cf97d1ae662cf360e49",
+    "semantic_hash": "50e79223b7557cf97d1ae662cf360e49"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/functions/admin-create-creator/index.ts": {
+    "mtime": 1779193726.6942165,
+    "ast_hash": "972de58bef0441ec5966c0f2b510f82b",
+    "semantic_hash": "972de58bef0441ec5966c0f2b510f82b"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/functions/_shared/creatorAccounts.ts": {
+    "mtime": 1779660635.9740036,
+    "ast_hash": "d767531d52d03204144d8e5fc957fb50",
+    "semantic_hash": "d767531d52d03204144d8e5fc957fb50"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/functions/client-creator-accounts/deno.json": {
+    "mtime": 1779193672.751053,
+    "ast_hash": "50e79223b7557cf97d1ae662cf360e49",
+    "semantic_hash": "50e79223b7557cf97d1ae662cf360e49"
+  },
+  "/Users/milan/Maurice/susly-dashboard/supabase/functions/client-creator-accounts/index.ts": {
+    "mtime": 1779658020.7771468,
+    "ast_hash": "69adec907c251a66bc331dfd8f97c61e",
+    "semantic_hash": "69adec907c251a66bc331dfd8f97c61e"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/layout.tsx": {
+    "mtime": 1777325408.7217538,
+    "ast_hash": "646ede4cf91dc0c5513d1c3ac0aaf743",
+    "semantic_hash": "646ede4cf91dc0c5513d1c3ac0aaf743"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/page.tsx": {
+    "mtime": 1779657129.8686576,
+    "ast_hash": "34eb31fda7982483a7fa52e8cabe435d",
+    "semantic_hash": "34eb31fda7982483a7fa52e8cabe435d"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/users/page.tsx": {
+    "mtime": 1779657130.034564,
+    "ast_hash": "43446338ce7ac52dd854a7ee7d709f46",
+    "semantic_hash": "43446338ce7ac52dd854a7ee7d709f46"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/creators/page.tsx": {
+    "mtime": 1779657130.128728,
+    "ast_hash": "64b494b498b3efbfde18638ac2386a68",
+    "semantic_hash": "64b494b498b3efbfde18638ac2386a68"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/api/admin/mock-profiles/route.ts": {
+    "mtime": 1777570034.0460565,
+    "ast_hash": "f2e500ae4fd8a0b7892932b6608b8949",
+    "semantic_hash": "f2e500ae4fd8a0b7892932b6608b8949"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/api/admin/users/route.ts": {
+    "mtime": 1779657986.5553133,
+    "ast_hash": "213c2ffb8ed239f62fedb2e926231cfb",
+    "semantic_hash": "213c2ffb8ed239f62fedb2e926231cfb"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/api/admin/creators/route.ts": {
+    "mtime": 1779658020.6933396,
+    "ast_hash": "518aaa37c20622a257d134434317d80c",
+    "semantic_hash": "518aaa37c20622a257d134434317d80c"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/api/admin/overview/route.ts": {
+    "mtime": 1779657959.2362218,
+    "ast_hash": "98f8c687e32c7a85dd72ab9f11bf4e31",
+    "semantic_hash": "98f8c687e32c7a85dd72ab9f11bf4e31"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/api/admin/onboarding/route.ts": {
+    "mtime": 1779657959.3186977,
+    "ast_hash": "8b4936ee65e843b1be37bb411f697552",
+    "semantic_hash": "8b4936ee65e843b1be37bb411f697552"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/app/onboarding/page.tsx": {
+    "mtime": 1779657129.9422374,
+    "ast_hash": "7475673f91faa263cf77adc67054e2c7",
+    "semantic_hash": "7475673f91faa263cf77adc67054e2c7"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/components/DashboardApp.tsx": {
+    "mtime": 1779658037.2389812,
+    "ast_hash": "7cf4cfed5d1cea7b0d0f70c62feee603",
+    "semantic_hash": "7cf4cfed5d1cea7b0d0f70c62feee603"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/creator-provisioning.ts": {
+    "mtime": 1779193760.3629117,
+    "ast_hash": "a85b4b4ad7691215d8b943e17736e3e9",
+    "semantic_hash": "a85b4b4ad7691215d8b943e17736e3e9"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/creator-accounts.ts": {
+    "mtime": 1779660635.9264135,
+    "ast_hash": "a5a16ba415a6a6bcb4f5713707c14391",
+    "semantic_hash": "a5a16ba415a6a6bcb4f5713707c14391"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/admin-dashboard-data.ts": {
+    "mtime": 1779657929.9290588,
+    "ast_hash": "4ae5cfbc5e724791c3f9888aadf3ff37",
+    "semantic_hash": "4ae5cfbc5e724791c3f9888aadf3ff37"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/types.ts": {
+    "mtime": 1779657929.887587,
+    "ast_hash": "5a185ed97d4b41ce624217794624a54d",
+    "semantic_hash": "5a185ed97d4b41ce624217794624a54d"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/format.ts": {
+    "mtime": 1777641287.118807,
+    "ast_hash": "2e5d617cae811ad4bb081c5da49963da",
+    "semantic_hash": "2e5d617cae811ad4bb081c5da49963da"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/admin-auth.ts": {
+    "mtime": 1777325182.8060331,
+    "ast_hash": "a15ec7f98b8ee90f11df74d308037799",
+    "semantic_hash": "a15ec7f98b8ee90f11df74d308037799"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/supabase.ts": {
+    "mtime": 1777325182.7887137,
+    "ast_hash": "c1c51df294abfb93dc9a49a33866547a",
+    "semantic_hash": "c1c51df294abfb93dc9a49a33866547a"
+  },
+  "/Users/milan/Maurice/susly-dashboard/src/lib/env.ts": {
+    "mtime": 1777325182.7688484,
+    "ast_hash": "bc1cddcd4ceb848676408e5a68846325",
+    "semantic_hash": "bc1cddcd4ceb848676408e5a68846325"
+  },
+  "/Users/milan/Maurice/susly-dashboard/revenuecat-subscription-reconciliation.md": {
+    "mtime": 1779317246.4592404,
+    "ast_hash": "13152f14d25ebb4832a26a28af62c4f7",
+    "semantic_hash": "13152f14d25ebb4832a26a28af62c4f7"
+  },
+  "/Users/milan/Maurice/susly-dashboard/README.md": {
+    "mtime": 1777325814.175326,
+    "ast_hash": "490ca4522f60be9cdf0d79ea454c933e",
+    "semantic_hash": "490ca4522f60be9cdf0d79ea454c933e"
+  },
+  "/Users/milan/Maurice/susly-dashboard/AGENTS.md": {
+    "mtime": 1778246544.0554533,
+    "ast_hash": "7b39323c2437e73cf77855a5b7853fb2",
+    "semantic_hash": "7b39323c2437e73cf77855a5b7853fb2"
+  },
+  "/Users/milan/Maurice/susly-dashboard/client-creator-api-integration.md": {
+    "mtime": 1779658045.350624,
+    "ast_hash": "44802c0ff8d7637f81cf81792f9b5733",
+    "semantic_hash": "44802c0ff8d7637f81cf81792f9b5733"
+  },
+  "/Users/milan/Maurice/susly-dashboard/CLAUDE.md": {
+    "mtime": 1777325013.4867413,
+    "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
+    "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
+  },
+  "/Users/milan/Maurice/susly-dashboard/public/file.svg": {
+    "mtime": 1777324971.1867936,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "/Users/milan/Maurice/susly-dashboard/public/vercel.svg": {
+    "mtime": 1777324971.1867464,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "/Users/milan/Maurice/susly-dashboard/public/next.svg": {
+    "mtime": 1777324971.1866848,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "/Users/milan/Maurice/susly-dashboard/public/globe.svg": {
+    "mtime": 1777324971.1866322,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "/Users/milan/Maurice/susly-dashboard/public/window.svg": {
+    "mtime": 1777324971.186802,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}
