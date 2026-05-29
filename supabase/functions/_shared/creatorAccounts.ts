@@ -387,6 +387,10 @@ export async function listCreatorAccounts(supabase: ReturnType<typeof createClie
       appLoginCompletedAt,
       creatorToolLoginCompleted: Boolean(creatorToolLoginCompletedAt),
       creatorToolLoginCompletedAt,
+      loginFlags: {
+        application: Boolean(appLoginCompletedAt),
+        creatorTool: Boolean(creatorToolLoginCompletedAt),
+      },
       appUserId,
       mockAccountId,
       createdAt: typeof row.created_at === "string" ? row.created_at : null,

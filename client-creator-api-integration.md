@@ -22,7 +22,7 @@ So when an account is disabled, it should be treated as disabled everywhere.
 Use this API key as a bearer token on every request:
 
 ```txt
-Authorization: Bearer db998c4b7500dc1515fac740531ba2b736f2b871aa7d528c091331164669570e
+Authorization: Bearer b26e8b1e63e81429a1dc31c7d06a2bc09ee33d304de2d0b5b09b7d0ac4d160b3
 ```
 
 Do not use any Supabase key on the frontend.
@@ -56,7 +56,7 @@ The external API function path is:
 
 ```bash
 curl -X GET https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator-accounts \
-  -H "Authorization: Bearer db998c4b7500dc1515fac740531ba2b736f2b871aa7d528c091331164669570e"
+  -H "Authorization: Bearer b26e8b1e63e81429a1dc31c7d06a2bc09ee33d304de2d0b5b09b7d0ac4d160b3"
 ```
 
 #### Expected response
@@ -73,6 +73,10 @@ curl -X GET https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator
       "appLoginCompletedAt": "2026-05-19T10:00:00.000Z",
       "creatorToolLoginCompleted": true,
       "creatorToolLoginCompletedAt": "2026-05-19T10:00:00.000Z",
+      "loginFlags": {
+        "application": true,
+        "creatorTool": true
+      },
       "appUserId": "uuid",
       "mockAccountId": "uuid",
       "createdAt": "2026-05-19T10:00:00.000Z",
@@ -81,6 +85,16 @@ curl -X GET https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator
   ]
 }
 ```
+
+#### Login flags
+
+Each creator includes two login-completion flags:
+- `loginFlags.application`: true when the creator has successfully logged in to the app mock account
+- `loginFlags.creatorTool`: true when the creator has successfully logged in to the creator tool
+
+The same values are also exposed as top-level fields for compatibility:
+- `appLoginCompleted`
+- `creatorToolLoginCompleted`
 
 ### 2. Create creator
 
@@ -103,7 +117,7 @@ UI note:
 
 ```bash
 curl -X POST https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator-accounts \
-  -H "Authorization: Bearer db998c4b7500dc1515fac740531ba2b736f2b871aa7d528c091331164669570e" \
+  -H "Authorization: Bearer b26e8b1e63e81429a1dc31c7d06a2bc09ee33d304de2d0b5b09b7d0ac4d160b3" \
   -H "Content-Type: application/json" \
   -d '{"email":"creator@susly.app"}'
 ```
@@ -153,7 +167,7 @@ Important:
 
 ```bash
 curl -X PATCH https://idexmwfjpclvdofwenge.supabase.co/functions/v1/client-creator-accounts \
-  -H "Authorization: Bearer db998c4b7500dc1515fac740531ba2b736f2b871aa7d528c091331164669570e" \
+  -H "Authorization: Bearer b26e8b1e63e81429a1dc31c7d06a2bc09ee33d304de2d0b5b09b7d0ac4d160b3" \
   -H "Content-Type: application/json" \
   -d '{"id":"creator-id","enabled":false}'
 ```
